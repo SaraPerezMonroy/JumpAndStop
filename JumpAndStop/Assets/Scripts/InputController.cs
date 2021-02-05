@@ -17,11 +17,14 @@ public class InputController : MonoBehaviour
     Vector3[] calculatedPoints;
     private List<GameObject> visualPath = new List<GameObject>();
     public GameObject pathDot;
-    public int calculatePoints = 250;
-
+    public int calculatePoints = 5;
+    public bool calculatePathWithSteps = false;
 
     void Awake()
     {
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = 60;
+
         rb = GetComponent<Rigidbody2D>();
     }
 
@@ -85,13 +88,25 @@ public class InputController : MonoBehaviour
         rb.AddForce(forceDirection * forceImpulser, ForceMode2D.Impulse);
         Time.timeScale = 1.0f;
     }
-
-    public static Vector3[] Plot(Rigidbody2D rigidbody, Vector2 pos, Vector2 velocity, int steps)
+    /// <summary>
+    /// Función que calcula los puntos de la parábola que hará un rigidbopdy dada una posición y una velocidad.
+    /// </summary>
+    /// <param name="rigidbody"></param>
+    /// <param name="pos"></param>
+    /// <param name="velocity"></param>
+    /// <param name="steps"></param>
+    /// <returns></returns>
+    public Vector3[] Plot(Rigidbody2D rigidbody, Vector2 pos, Vector2 velocity, int steps)
     {
         
         Vector3[] results = new Vector3[steps];
+        float timestep = 0.15f;
+        if(calculatePathWithSteps)
+        {
+            timestep = Time.fixedDeltaTime / Physics2D.velocityIterations;
+        }
+        
 
-        float timestep = Time.fixedDeltaTime / Physics2D.velocityIterations;
         Vector2 gravityAccel = Physics2D.gravity * rigidbody.gravityScale * timestep * timestep;
         float drag = 1f - timestep * rigidbody.drag;
         Vector2 moveStep = velocity * timestep;
@@ -104,7 +119,6 @@ public class InputController : MonoBehaviour
             results[i] = pos;
         }
 
-        Debug.Log(results.ToString());
         return results;
     }
 
