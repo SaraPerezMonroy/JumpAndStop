@@ -26,20 +26,59 @@ public class InputController : MonoBehaviour
         Application.targetFrameRate = 60;
 
         rb = GetComponent<Rigidbody2D>();
+
+        switch (Application.platform)
+        {
+            case RuntimePlatform.Android:
+                forceImpulser = 20f;
+                break;
+            case RuntimePlatform.WindowsEditor:
+                forceImpulser = 1000f;
+                break;
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
+        PlayingOnPC();
 
-        #if UNITY_EDITOR || UNITY_STANDALONE
+        TouchDeviceControl();
+    }
+
+    void TouchDeviceControl()
+    {
+        if (Input.touchCount == 1)
+        {
+            Time.timeScale = 0.001f;
+            if (Input.GetTouch(0).phase == TouchPhase.Began)
+            {
+                StartCoroutine(DebugText.instance.PrintText("Start Touch", 1.0f, Color.green));
+                clickOrigin = Input.GetTouch(0).position;
+            }
+            else if (Input.GetTouch(0).phase == TouchPhase.Moved)
+            {
+                clickDestiny = Input.GetTouch(0).position;
+                calculatedPoints = Plot(rb, transform.position, clickOrigin - clickDestiny, calculatePoints);
+                DrawPoints();
+            }
+            else if (Input.GetTouch(0).phase == TouchPhase.Ended)
+            {
+                clickDestiny = Input.GetTouch(0).position;
+                StartCoroutine(DebugText.instance.PrintText("ENDED Touch", 1.0f, Color.blue));
+                ApplyForce(clickOrigin - clickDestiny);
+            }
+        }
+    }
+    void PlayingOnPC()
+    {
         if (Input.GetMouseButtonDown(0))
         {
             clickOrigin = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             rb.velocity = Vector2.zero;
             Time.timeScale = 0.001f;
         }
-        
+
         if (Input.GetMouseButton(0))
         {
             calculatedPoints = Plot(rb, transform.position, clickOrigin - Camera.main.ScreenToWorldPoint(Input.mousePosition), calculatePoints);
@@ -52,42 +91,24 @@ public class InputController : MonoBehaviour
             Vector3 forceDirection = clickOrigin - clickDestiny;
             ApplyForce(forceDirection);
         }
-#elif UNITY_IOS || UNITY_ANDROID
-        if(Input.touchCount > 0)
-        {
-            infoTouch = Input.GetTouch(0);
-            Time.timeScale = 0.001f;
-
-        }
-        else
-        {
-            AppyForce(Touch.deltaPosition);
-            infoTouch = null;
-        }
-
-#endif
-
 
     }
 
+
+    /// <summary>
+    /// Aplica una fuerza en la direccion dada así como vuelve el tiempo a la normalidad.
+    /// </summary>
+    /// <param name="direction"></param>
     void ApplyForce(Vector2 direction)
     {
-
+        direction = new Vector2(direction.x / Screen.width, direction.y / Screen.height) * forceImpulser;
+        StartCoroutine(DebugText.instance.PrintText("Add force " + direction, 1.0f, Color.red));
         rb.velocity = Vector2.zero;
-        rb.AddForce(direction * forceImpulser, ForceMode2D.Impulse);
+        rb.AddForce(direction, ForceMode2D.Impulse);
         Time.timeScale = 1.0f;
         ClearVisualPath();
     }
 
-
-
-    void ApplyForce()
-    {
-        Vector3 forceDirection = clickOrigin - clickDestiny;
-        rb.velocity = Vector2.zero;
-        rb.AddForce(forceDirection * forceImpulser, ForceMode2D.Impulse);
-        Time.timeScale = 1.0f;
-    }
     /// <summary>
     /// Función que calcula los puntos de la parábola que hará un rigidbopdy dada una posición y una velocidad.
     /// </summary>
@@ -98,7 +119,7 @@ public class InputController : MonoBehaviour
     /// <returns></returns>
     public Vector3[] Plot(Rigidbody2D rigidbody, Vector2 pos, Vector2 velocity, int steps)
     {
-        
+        velocity = new Vector2(velocity.x / Screen.width, velocity.y / Screen.height) * forceImpulser;
         Vector3[] results = new Vector3[steps];
         float timestep = 0.15f;
         if(calculatePathWithSteps)
@@ -121,7 +142,9 @@ public class InputController : MonoBehaviour
 
         return results;
     }
-
+    /// <summary>
+    /// Encargada de dibujar la parábola del tiro del jugador
+    /// </summary>
     void DrawPoints()
     {
         ClearVisualPath();
@@ -134,7 +157,9 @@ public class InputController : MonoBehaviour
             visualPath[i].GetComponent<SpriteRenderer>().color = newColor;
         }
     }
-
+    /// <summary>
+    /// Elimina los puntos de la parábola
+    /// </summary>
     void ClearVisualPath()
     {
         for (int i = 0; i < visualPath.Count; i++)
