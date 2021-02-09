@@ -55,6 +55,7 @@ public class InputController : MonoBehaviour
             {
                 StartCoroutine(DebugText.instance.PrintText("Start Touch", 1.0f, Color.green));
                 clickOrigin = Input.GetTouch(0).position;
+                clickDestiny = Input.GetTouch(0).position;
             }
             else if (Input.GetTouch(0).phase == TouchPhase.Moved)
             {
